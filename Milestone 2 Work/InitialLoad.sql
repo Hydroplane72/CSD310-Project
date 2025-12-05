@@ -150,12 +150,12 @@ CREATE TABLE Equipment (
   Name VARCHAR(100),
   Category VARCHAR(50), -- e.g. Tent, Backpack
   PurchaseDate DATE,
-  Condition VARCHAR(50), -- e.g. New, Good, Worn
+  EquipCondition VARCHAR(50), -- e.g. New, Good, Worn
   AvailableQuantity INT
 );
 
 
-INSERT INTO Equipment (Name, Category, PurchaseDate, Condition, AvailableQuantity)
+INSERT INTO Equipment (Name, Category, PurchaseDate, EquipCondition, AvailableQuantity)
 VALUES
 ('Tent A','Tent','2020-01-01','Good',5),
 ('Tent B','Tent','2019-05-01','Worn',3),

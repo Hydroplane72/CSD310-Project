@@ -16,7 +16,7 @@ def display_table(cursor, table_name):
     :param table_name: Name of the table to display data from
     """
     # Fetch and display all data from the table
-    print(f"\n--- {table_name} ---")
+    print(f"\n--- {table_name} table ---")
 
     # Execute query to fetch all data
     cursor.execute(f"SELECT * FROM {table_name}")
@@ -30,7 +30,7 @@ def display_table(cursor, table_name):
     print(" | ".join(columns))
 
     print("-" * 50)
-    
+
     # Print each row
     for row in rows:
         print(" | ".join(str(item) if item is not None else "" for item in row))
