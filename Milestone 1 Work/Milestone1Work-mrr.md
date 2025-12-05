@@ -50,6 +50,15 @@ NOTE: I did use AI to pretty all of this up
 - A customer may want to book for multiple people at a time
 - If the Family member is not of age, then we will want to get a waiver signed
 - An ECommerce site will need 2FA abilities
+- Customer Account status's will not expand in the future
+- FamilyMember Relationship should be a look up table but for simplicity I am not doing that.
+- Depending on the language of the Waiver you may not need to know if the child or the parent signed the form. You could technically go off of if the "ParentMemberID" is filled in to know if the waiver is for a child. This would mean SignedByParent and SignedByChild would not be needed.
+- Trip.Region should be a look up table
+- Booking.Status should be a look up table
+- Equipment "Category" and "Condition" should be look up tables
+- TwoFactorMethod could be normalized into a look up table, but then in the future if you wanted to add new 2FA something, you would have to add it there.
+- Staff.Role should be a look up table and should also stay in parity with Database Roles to keep things as simple as possible.
+- There is not a "TripAssignment" table to assign staff to trips. I am assuming that employees will be assigned to all trips anyways and there is no need for a designated "lead".
 
 ## Entities & Attributes
 
