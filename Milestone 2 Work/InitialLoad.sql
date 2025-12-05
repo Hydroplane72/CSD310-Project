@@ -1,3 +1,9 @@
+-- Create database if it doesn't exist
+CREATE DATABASE IF NOT EXISTS outland_adventures;
+
+-- Switch to the database
+USE outland_adventures;
+
 -- Drop tables if they exist (for clean re-run)
 DROP TABLE IF EXISTS Waiver, EquipmentTransaction, Booking, TwoFactorMethod, FamilyMember, Equipment, Trip, Staff, CustomerAccount;
 
