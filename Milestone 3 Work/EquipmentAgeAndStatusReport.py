@@ -13,7 +13,7 @@ def main():
     cursor = conn.cursor()
 
     # Get Report from view
-    TableData.display_table(cursor, "EquipmentProfitViewWithRentals", True)
+    TableData.display_table(cursor, "EquipmentAgeAndInventoryStatus", False)
 
     # Close the cursor and connection
     cursor.close()

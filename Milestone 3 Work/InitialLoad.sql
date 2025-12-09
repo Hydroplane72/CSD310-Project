@@ -7,6 +7,7 @@ USE outland_adventures;
 
 -- Drop all views first (to avoid dependency errors)
 DROP VIEW IF EXISTS EquipmentProfitViewWithRentals;
+DROP VIEW IF EXISTS EquipmentAgeAndInventoryStatus;
 
 -- Drop all tables (reverse dependency order)
 DROP TABLE IF EXISTS Waiver;
@@ -297,3 +298,23 @@ SELECT
 FROM Equipment e
 LEFT JOIN EquipmentTransaction t ON e.EquipmentID = t.EquipmentID
 GROUP BY e.EquipmentID, e.Name, e.Category, e.InitialCost, e.SalePrice, e.RentalPrice;
+
+-- ============================================
+-- View: EquipmentAgeAndInventoryStatus
+-- ============================================
+CREATE VIEW EquipmentAgeAndInventoryStatus AS
+SELECT
+    EquipmentID,
+    Name,
+    Category,
+    EquipCondition AS EquipCondition,
+    AvailableQuantity AS InventoryLevel,
+    PurchaseDate,
+    DATEDIFF(CURDATE(), PurchaseDate) AS DaysSincePurchase,
+    TIMESTAMPDIFF(YEAR, PurchaseDate, CURDATE()) AS YearsSincePurchase,
+    CASE
+        WHEN TIMESTAMPDIFF(YEAR, PurchaseDate, CURDATE()) >= 5 THEN 'Over 5 Years Old'
+        ELSE 'Under 5 Years Old'
+    END AS AgeStatus
+FROM
+    Equipment;
