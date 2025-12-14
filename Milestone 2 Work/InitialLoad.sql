@@ -35,6 +35,7 @@ VALUES
 ('Rodriguez Family','James Rodriguez','rodriguez@example.com','555-9999','rodriguezfam','hash9','Active',FALSE),
 ('Martinez Family','Patricia Martinez','martinez@example.com','555-0000','martinezfam','hash10','Active',TRUE);
 
+
 -- =========================
 -- Table: FamilyMember
 -- =========================
@@ -249,3 +250,12 @@ VALUES
 ('Mei Wong','Developer','Builds and maintains the e-commerce site for trip schedules and equipment sales'),
 ('Blythe Timmerson','Admin','Handles office operations and overall administration of Outland Adventures'),
 ('Jim Ford','Admin','Handles office operations and overall administration of Outland Adventures');
+
+-- Granting user account permissions to outland_adventures staff members
+GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'john.macneil@outlandadventures.com';
+GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'db.marland@outlandadventures.com';
+GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'anita.gallegos@outlandadventures.com';
+GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'dimitrios.stravopolous@outlandadventures.com';
+GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'mei.wong@outlandadventures.com';
+GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'blythe.timmerson@outlandadventures.com';
+GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'jim.ford@outlandadventures.com';

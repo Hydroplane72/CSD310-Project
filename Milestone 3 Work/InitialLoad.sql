@@ -4,8 +4,22 @@ CREATE DATABASE IF NOT EXISTS outland_adventures;
 -- Switch to the database
 USE outland_adventures;
 
--- Drop tables if they exist (for clean re-run)
-DROP TABLE IF EXISTS Waiver, EquipmentTransaction, Booking, TwoFactorMethod, FamilyMember, Equipment, Trip, Staff, CustomerAccount;
+
+-- Drop all views first (to avoid dependency errors)
+DROP VIEW IF EXISTS EquipmentProfitViewWithRentals;
+DROP VIEW IF EXISTS EquipmentAgeAndInventoryStatus;
+
+-- Drop all tables (reverse dependency order)
+DROP TABLE IF EXISTS Waiver;
+DROP TABLE IF EXISTS EquipmentTransaction;
+DROP TABLE IF EXISTS Booking;
+DROP TABLE IF EXISTS TwoFactorMethod;
+DROP TABLE IF EXISTS FamilyMember;
+DROP TABLE IF EXISTS Equipment;
+DROP TABLE IF EXISTS Trip;
+DROP TABLE IF EXISTS Staff;
+DROP TABLE IF EXISTS CustomerAccount;
+
 
 -- =========================
 -- Table: CustomerAccount
@@ -143,31 +157,36 @@ VALUES
 (9,9,'2025-05-01','Confirmed',2),
 (10,10,'2025-05-15','Pending',1);
 
--- =========================
 -- Table: Equipment
 -- =========================
 CREATE TABLE Equipment (
   EquipmentID INT AUTO_INCREMENT PRIMARY KEY,
   Name VARCHAR(100),
-  Category VARCHAR(50), -- e.g. Tent, Backpack
+  Category VARCHAR(50),        -- e.g. Tent, Backpack, Sleeping Bag
   PurchaseDate DATE,
-  EquipCondition VARCHAR(50), -- e.g. New, Good, Worn
-  AvailableQuantity INT
+  EquipCondition VARCHAR(50),  -- e.g. New, Good, Worn
+  AvailableQuantity INT,
+  InitialCost DECIMAL(10,2),   -- acquisition cost
+  SalePrice DECIMAL(10,2),     -- selling price
+  RentalPrice DECIMAL(10,2)    -- rental fee
 );
 
-
-INSERT INTO Equipment (Name, Category, PurchaseDate, EquipCondition, AvailableQuantity)
+-- =========================
+-- Sample Data Inserts
+-- =========================
+INSERT INTO Equipment (Name, Category, PurchaseDate, EquipCondition, AvailableQuantity, InitialCost, SalePrice, RentalPrice)
 VALUES
-('Tent A','Tent','2020-01-01','Good',5),
-('Tent B','Tent','2019-05-01','Worn',3),
-('Backpack A','Backpack','2021-03-01','New',10),
-('Sleeping Bag A','Sleeping Bag','2018-07-01','Worn',2),
-('Sleeping Bag B','Sleeping Bag','2022-01-01','New',8),
-('Stove A','Cooking','2020-09-01','Good',4),
-('Lantern A','Lighting','2019-11-01','Good',6),
-('Lantern B','Lighting','2021-02-01','New',7),
-('Boots A','Footwear','2022-05-01','New',12),
-('Boots B','Footwear','2017-06-01','Worn',1);
+('Tent A','Tent','2020-01-01','Good',5,200.00,300.00,25.00),
+('Tent B','Tent','2019-05-01','Worn',3,150.00,220.00,20.00),
+('Backpack A','Backpack','2021-03-01','New',10,80.00,120.00,10.00),
+('Sleeping Bag A','Sleeping Bag','2018-07-01','Worn',2,60.00,90.00,8.00),
+('Sleeping Bag B','Sleeping Bag','2022-01-01','New',8,70.00,100.00,9.00),
+('Stove A','Cooking','2020-09-01','Good',4,50.00,75.00,6.00),
+('Lantern A','Lighting','2019-11-01','Good',6,40.00,60.00,5.00),
+('Lantern B','Lighting','2021-02-01','New',7,45.00,70.00,6.00),
+('Boots A','Footwear','2022-05-01','New',12,90.00,130.00,12.00),
+('Boots B','Footwear','2017-06-01','Worn',1,70.00,100.00,10.00);
+
 
 -- =========================
 -- Table: EquipmentTransaction
@@ -252,10 +271,50 @@ VALUES
 ('Jim Ford','Admin','Handles office operations and overall administration of Outland Adventures');
 
 -- Granting user account permissions to outland_adventures staff members
-GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'john.macneil@outlandadventures.com';
+/* GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'john.macneil@outlandadventures.com';
 GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'db.marland@outlandadventures.com';
 GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'anita.gallegos@outlandadventures.com';
 GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'dimitrios.stravopolous@outlandadventures.com';
 GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'mei.wong@outlandadventures.com';
 GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'blythe.timmerson@outlandadventures.com';
-GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'jim.ford@outlandadventures.com';
+GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'jim.ford@outlandadventures.com'; */
+
+-- View: EquipmentProfitViewWithRentals
+-- Combines equipment financials with actual rental revenue from transactions
+CREATE VIEW EquipmentProfitViewWithRentals AS
+SELECT
+    e.EquipmentID,
+    e.Name,
+    e.Category,
+    e.InitialCost,
+    e.SalePrice,
+    e.RentalPrice,
+    (e.SalePrice - e.InitialCost) AS SaleProfit,
+    ROUND((e.RentalPrice / e.InitialCost) * 100, 2) AS RentalROI_Percent,
+    COALESCE(SUM(CASE WHEN t.TransactionType = 'Rental' 
+                      THEN t.Quantity * e.RentalPrice ELSE 0 END),0) AS TotalRentalRevenue,
+    COALESCE(SUM(CASE WHEN t.TransactionType = 'Rental' 
+                      THEN t.Quantity ELSE 0 END),0) AS TotalRentalCount
+FROM Equipment e
+LEFT JOIN EquipmentTransaction t ON e.EquipmentID = t.EquipmentID
+GROUP BY e.EquipmentID, e.Name, e.Category, e.InitialCost, e.SalePrice, e.RentalPrice;
+
+-- ============================================
+-- View: EquipmentAgeAndInventoryStatus
+-- ============================================
+CREATE VIEW EquipmentAgeAndInventoryStatus AS
+SELECT
+    EquipmentID,
+    Name,
+    Category,
+    EquipCondition AS EquipCondition,
+    AvailableQuantity AS InventoryLevel,
+    PurchaseDate,
+    DATEDIFF(CURDATE(), PurchaseDate) AS DaysSincePurchase,
+    TIMESTAMPDIFF(YEAR, PurchaseDate, CURDATE()) AS YearsSincePurchase,
+    CASE
+        WHEN TIMESTAMPDIFF(YEAR, PurchaseDate, CURDATE()) >= 5 THEN 'Over 5 Years Old'
+        ELSE 'Under 5 Years Old'
+    END AS AgeStatus
+FROM
+    Equipment;
