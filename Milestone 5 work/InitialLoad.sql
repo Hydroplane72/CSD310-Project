@@ -114,20 +114,22 @@ CREATE TABLE Trip (
   EndDate DATE,
   Price DECIMAL(10,2),
   SuggestedMaxParticipants INT
+  LeadGuide INT, -- references Staff table
+  FOREIGN KEY (LeadGuide) REFERENCES Staff(StaffID)
 );
 
-INSERT INTO Trip (Destination, Region, StartDate, EndDate, Price, SuggestedMaxParticipants)
+INSERT INTO Trip (Destination, Region, StartDate, EndDate, Price, SuggestedMaxParticipants, LeadGuide)
 VALUES
-('Kilimanjaro Trek','Africa','2025-02-01','2025-02-10',2500.00,12),
-('Safari Adventure','Africa','2025-03-01','2025-03-07',1800.00,20),
-('Everest Base Camp','Asia','2025-04-01','2025-04-15',3000.00,15),
-('Annapurna Circuit','Asia','2025-05-01','2025-05-14',2800.00,12),
-('Alps Hiking','Southern Europe','2025-06-01','2025-06-07',1500.00,10),
-('Pyrenees Trek','Southern Europe','2025-07-01','2025-07-10',1600.00,10),
-('Sahara Desert Trek','Africa','2025-08-01','2025-08-05',1200.00,8),
-('Great Wall Hike','Asia','2025-09-01','2025-09-07',2000.00,20),
-('Dolomites Adventure','Southern Europe','2025-10-01','2025-10-08',1700.00,12),
-('Atlas Mountains','Africa','2025-11-01','2025-11-09',1900.00,15);
+('Kilimanjaro Trek','Africa','2025-02-01','2025-02-10',2500.00,12,1),   -- John MacNell
+('Safari Adventure','Africa','2025-03-01','2025-03-07',1800.00,20,2),   -- Duke Marland
+('Everest Base Camp','Asia','2025-04-01','2025-04-15',3000.00,15,1),    -- John MacNell
+('Annapurna Circuit','Asia','2025-05-01','2025-05-14',2800.00,12,2),    -- Duke Marland
+('Alps Hiking','Southern Europe','2025-06-01','2025-06-07',1500.00,10,1), -- John MacNell
+('Pyrenees Trek','Southern Europe','2025-07-01','2025-07-10',1600.00,10,2), -- Duke Marland
+('Sahara Desert Trek','Africa','2025-08-01','2025-08-05',1200.00,8,1),  -- John MacNell
+('Great Wall Hike','Asia','2025-09-01','2025-09-07',2000.00,20,2),      -- Duke Marland
+('Dolomites Adventure','Southern Europe','2025-10-01','2025-10-08',1700.00,12,1), -- John MacNell
+('Atlas Mountains','Africa','2025-11-01','2025-11-09',1900.00,15,2);    -- Duke Marland
 
 -- =========================
 -- Table: Booking
@@ -281,23 +283,49 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'jim.ford@outlan
 
 -- View: EquipmentProfitViewWithRentals
 -- Combines equipment financials with actual rental revenue from transactions
+-- View: EquipmentProfitViewWithRentals
+-- Includes cumulative ROI from rentals
 CREATE VIEW EquipmentProfitViewWithRentals AS
 SELECT
-    e.EquipmentID,
-    e.Name,
-    e.Category,
-    e.InitialCost,
-    e.SalePrice,
-    e.RentalPrice,
-    (e.SalePrice - e.InitialCost) AS SaleProfit,
-    ROUND((e.RentalPrice / e.InitialCost) * 100, 2) AS RentalROI_Percent,
-    COALESCE(SUM(CASE WHEN t.TransactionType = 'Rental' 
-                      THEN t.Quantity * e.RentalPrice ELSE 0 END),0) AS TotalRentalRevenue,
-    COALESCE(SUM(CASE WHEN t.TransactionType = 'Rental' 
-                      THEN t.Quantity ELSE 0 END),0) AS TotalRentalCount
+    e.EquipmentID AS `Equipment ID`,
+    e.Name AS `Name`,
+    e.Category AS `Category`,
+    e.InitialCost AS `Initial Cost`,
+    
+    -- Sale aggregates
+    COALESCE(SUM(CASE WHEN t.TransactionType = 'Purchase'
+                      THEN t.Quantity ELSE 0 END),0) AS `Total Sale Count`,
+    COALESCE(SUM(CASE WHEN t.TransactionType = 'Purchase'
+                      THEN t.Quantity * e.SalePrice ELSE 0 END),0) AS `Total Sale Revenue`,
+
+    -- Rental aggregates
+    COALESCE(SUM(CASE WHEN t.TransactionType = 'Rental'
+                      THEN t.Quantity ELSE 0 END),0) AS `Total Rental Count`,
+    COALESCE(SUM(CASE WHEN t.TransactionType = 'Rental'
+                      THEN t.Quantity * e.RentalPrice ELSE 0 END),0) AS `Total Rental Revenue`,
+
+    -- Combined totals
+    COALESCE(SUM(CASE WHEN t.TransactionType = 'Purchase'
+                      THEN t.Quantity * e.SalePrice ELSE 0 END),0)
+    + COALESCE(SUM(CASE WHEN t.TransactionType = 'Rental'
+                      THEN t.Quantity * e.RentalPrice ELSE 0 END),0) AS `Total Combined Revenue`,
+
+    COALESCE(SUM(CASE WHEN t.TransactionType IN ('Purchase','Rental')
+                      THEN t.Quantity ELSE 0 END),0) AS `Total Combined Count`,
+
+    -- Total profit (sales revenue minus purchase cost, plus rental revenue)
+    (
+      COALESCE(SUM(CASE WHEN t.TransactionType = 'Purchase'
+                        THEN (t.Quantity * e.SalePrice) - (t.Quantity * e.InitialCost)
+                        ELSE 0 END),0)
+      + COALESCE(SUM(CASE WHEN t.TransactionType = 'Rental'
+                        THEN t.Quantity * e.RentalPrice ELSE 0 END),0)
+    ) AS `Total Profit`
+
 FROM Equipment e
 LEFT JOIN EquipmentTransaction t ON e.EquipmentID = t.EquipmentID
 GROUP BY e.EquipmentID, e.Name, e.Category, e.InitialCost, e.SalePrice, e.RentalPrice;
+
 
 -- ============================================
 -- View: EquipmentAgeAndInventoryStatus
