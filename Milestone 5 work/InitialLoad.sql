@@ -272,19 +272,8 @@ VALUES
 (10,'Email','martinez@example.com',TRUE,'2025-02-01');
 
 
--- Granting user account permissions to outland_adventures staff members
-/* GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'john.macneil@outlandadventures.com';
-GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'db.marland@outlandadventures.com';
-GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'anita.gallegos@outlandadventures.com';
-GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'dimitrios.stravopolous@outlandadventures.com';
-GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'mei.wong@outlandadventures.com';
-GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'blythe.timmerson@outlandadventures.com';
-GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'jim.ford@outlandadventures.com'; */
-
 -- View: EquipmentProfitViewWithRentals
 -- Combines equipment financials with actual rental revenue from transactions
--- View: EquipmentProfitViewWithRentals
--- Includes cumulative ROI from rentals
 CREATE VIEW EquipmentProfitViewWithRentals AS
 SELECT
     e.EquipmentID AS `Equipment ID`,
@@ -338,7 +327,6 @@ SELECT
         e.EquipCondition AS `EquipCondition`,
         e.AvailableQuantity AS `InventoryLevel`,
         e.PurchaseDate AS `PurchaseDate`,
-        (TO_DAYS(CURDATE()) - TO_DAYS(e.PurchaseDate)) AS `DaysSincePurchase`,
         TIMESTAMPDIFF(YEAR, e.PurchaseDate, CURDATE()) AS `YearsSincePurchase`,
         (CASE
             WHEN TIMESTAMPDIFF(YEAR, e.PurchaseDate, CURDATE()) >= 5
@@ -348,6 +336,21 @@ SELECT
     FROM Equipment e
     ORDER BY e.PurchaseDate ASC, e.EquipCondition ASC;
 
-
+-- ============================================
+-- View: EquipmentAgeAndInventoryStatus
+-- ============================================
+CREATE VIEW BookingSummaryByTripAndRegion AS
+SELECT
+          t.TripID,
+          t.Destination,
+          t.Region,
+          t.StartDate,
+          t.EndDate,
+          b.BookingDate,
+          b.Status,
+          b.NumberOfParticipants
+      FROM Trip t
+      JOIN Booking b ON t.TripID = b.TripID
+      ORDER BY t.Region, t.StartDate;
 
     

@@ -13,7 +13,7 @@ import os
 import mysql.connector
 from mysql.connector import Error
 from dotenv import dotenv_values
-
+from prettytable import PrettyTable # Run "pip install PrettyTable" in terminal if you don't have it
 
 def get_connection():
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -66,40 +66,38 @@ def fmt_value(val, col_name=""):
     return str(val)
 
 
-def print_table(title, rows, columns, max_rows=15):
+def print_table(cursor, title,query):
     print("\n" + title)
     print("-" * len(title))
 
+    # Execute query to fetch all data
+    cursor.execute(query)
+
+    # Fetch all rows
+    rows = cursor.fetchall()
+    
     if not rows:
         print("No rows returned.")
         return
+    # Create PrettyTable object
+    table = PrettyTable(field_names=[])
+    
+    # Get column names
+    table.field_names = [desc[0] for desc in cursor.description]
 
-    # Convert to list of list strings
-    data = []
-    for r in rows[:max_rows]:
-        data.append([fmt_value(r.get(col), col) for col in columns])
+    # Add rows to the table
+    # Add formatted rows
+    formatted_rows = []
+    formatted_row = []
+    for row in rows:
+        for i in range(len(row)):
+            formatted_row.append(fmt_value(row[table.field_names[i]], table.field_names[i]))
+        table.add_row(formatted_row)
+        formatted_row = []
 
-    # Compute column widths
-    widths = []
-    for i, col in enumerate(columns):
-        widest = len(col)
-        for row in data:
-            widest = max(widest, len(row[i]))
-        widths.append(widest)
-
-    # Header
-    header = " | ".join(columns[i].ljust(widths[i]) for i in range(len(columns)))
-    sep = "-+-".join("-" * widths[i] for i in range(len(columns)))
-    print(header)
-    print(sep)
-
-    # Rows
-    for row in data:
-        line = " | ".join(row[i].ljust(widths[i]) for i in range(len(columns)))
-        print(line)
-
-    if len(rows) > max_rows:
-        print(f"\n(Showing first {max_rows} rows out of {len(rows)})")
+    
+    # Print the table
+    print(table)
 
 
 def connect_and_print_reports():
@@ -116,146 +114,34 @@ def connect_and_print_reports():
         # ------------------------------------------------------------
         # REPORT SAMPLE 1: Booking Summary by Trip and Region
         # ------------------------------------------------------------
-        booking_summary_query = """
-            SELECT
-                t.TripID,
-                t.Destination,
-                t.Region,
-                t.StartDate,
-                t.EndDate,
-                b.BookingDate,
-                b.Status,
-                b.NumberOfParticipants
-            FROM Trip t
-            JOIN Booking b ON t.TripID = b.TripID
-            ORDER BY t.Region, t.StartDate;
-        """
-        cursor.execute(booking_summary_query)
-        booking_rows = cursor.fetchall()
-
+        query = "SELECT * From BookingSummaryByTripAndRegion"
         print_table(
+            cursor=cursor,
             title="Report Sample: Booking Summary by Trip and Region",
-            rows=booking_rows,
-            columns=[
-                "TripID",
-                "Destination",
-                "Region",
-                "StartDate",
-                "EndDate",
-                "BookingDate",
-                "Status",
-                "NumberOfParticipants"
-            ],
-            max_rows=12
+            query = query
         )
 
         # ------------------------------------------------------------
         # REPORT SAMPLE 2: Equipment Age and Inventory Status
         # ------------------------------------------------------------
-        equipment_age_query = """
-            SELECT
-                EquipmentID,
-                Name,
-                Category,
-                EquipCondition,
-                AvailableQuantity,
-                PurchaseDate,
-                TIMESTAMPDIFF(YEAR, PurchaseDate, CURDATE()) AS YearsSincePurchase,
-                CASE
-                    WHEN TIMESTAMPDIFF(YEAR, PurchaseDate, CURDATE()) >= 5 THEN 'Over 5 Years Old'
-                    ELSE 'Under 5 Years Old'
-                END AS AgeStatus
-            FROM Equipment
-            ORDER BY YearsSincePurchase DESC, Name;
-        """
-        cursor.execute(equipment_age_query)
-        equipment_age_rows = cursor.fetchall()
+        query = "SELECT * From EquipmentAgeAndInventoryStatus"
 
         print_table(
+            cursor=cursor,
             title="Report Sample: Equipment Age and Inventory Status",
-            rows=equipment_age_rows,
-            columns=[
-                "EquipmentID",
-                "Name",
-                "Category",
-                "EquipCondition",
-                "AvailableQuantity",
-                "PurchaseDate",
-                "YearsSincePurchase",
-                "AgeStatus"
-            ],
-            max_rows=12
+            query = query
         )
 
         # ------------------------------------------------------------
-        # REPORT SAMPLE 3: Equipment Rental vs Purchase Totals
-        # ------------------------------------------------------------
-        rental_vs_purchase_query = """
-            SELECT
-                e.EquipmentID,
-                e.Name,
-                e.Category,
-                SUM(CASE WHEN t.TransactionType = 'Purchase' THEN t.Quantity ELSE 0 END) AS TotalPurchased,
-                SUM(CASE WHEN t.TransactionType = 'Rental' THEN t.Quantity ELSE 0 END) AS TotalRented
-            FROM Equipment e
-            LEFT JOIN EquipmentTransaction t ON e.EquipmentID = t.EquipmentID
-            GROUP BY e.EquipmentID, e.Name, e.Category
-            ORDER BY TotalPurchased DESC, TotalRented DESC;
-        """
-        cursor.execute(rental_vs_purchase_query)
-        rvsp_rows = cursor.fetchall()
-
-        print_table(
-            title="Report Sample: Equipment Rental vs Purchase Totals",
-            rows=rvsp_rows,
-            columns=[
-                "EquipmentID",
-                "Name",
-                "Category",
-                "TotalPurchased",
-                "TotalRented"
-            ],
-            max_rows=12
-        )
-
-        # ------------------------------------------------------------
-        # REPORT SAMPLE 4: Equipment Profit and Rental Performance
+        # REPORT SAMPLE 3: Equipment Profit and Rental Performance
         # Uses the view EquipmentProfitViewWithRentals
         # ------------------------------------------------------------
-        equipment_profit_query = """
-            SELECT
-                EquipmentID,
-                Name,
-                Category,
-                InitialCost,
-                SalePrice,
-                SaleProfit,
-                RentalPrice,
-                RentalROI_Percent,
-                TotalRentalRevenue,
-                TotalRentalCount
-            FROM EquipmentProfitViewWithRentals
-            ORDER BY EquipmentID;
-        """
-        cursor.execute(equipment_profit_query)
-        profit_rows = cursor.fetchall()
+        query = "SELECT * From EquipmentProfitViewWithRentals"
 
         print_table(
+            cursor=cursor,
             title="Report Sample: Equipment Profit and Rental Performance",
-            rows=profit_rows,
-            columns=[
-                "EquipmentID",
-                "Name",
-                "Category",
-                "InitialCost",
-                "SalePrice",
-                "SaleProfit",
-                "RentalPrice",
-                "RentalROI_Percent",
-                "TotalRentalRevenue",
-                "TotalRentalCount"
-            ],
-            max_rows=12
+            query = query
         )
 
         print("\nDone. MySQL connection will now close.")
