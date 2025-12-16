@@ -6,6 +6,8 @@ from mysql.connector import MySQLConnection
 import dotenv # to use .env file
 import os
 from dotenv import dotenv_values
+from prettytable import PrettyTable # Run "pip install PrettyTable" in terminal if you don't have it
+
 
 
 def display_table(cursor, table_name, show_astable: bool = True) -> None:
@@ -26,17 +28,19 @@ def display_table(cursor, table_name, show_astable: bool = True) -> None:
     rows = cursor.fetchall()
 
     if show_astable:
+
+        # Create PrettyTable object
+        table = PrettyTable()
+        
         # Get column names
-        columns = [desc[0] for desc in cursor.description]
+        table.field_names = [desc[0] for desc in cursor.description]
 
-        # Print column headers
-        print(" | ".join(columns))
+        # Add rows to the table
+        table.add_rows(rows)
+        
+        # Print the table
+        print(table)
 
-        print("-" * 50)
-
-        # Print each row
-        for row in rows:
-            print(" | ".join(str(item) if item is not None else "" for item in row))
     else:
         # Get num of columns
         num_columns = len(cursor.description)
