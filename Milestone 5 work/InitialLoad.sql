@@ -102,6 +102,27 @@ VALUES
 (8,TRUE,FALSE,NULL,'2025-01-04'),
 (9,FALSE,TRUE,7,'2025-01-05'),
 (10,TRUE,FALSE,NULL,'2025-01-06');
+-- =========================
+-- Table: Staff
+-- =========================
+CREATE TABLE Staff (
+  StaffID INT AUTO_INCREMENT PRIMARY KEY,
+  Name VARCHAR(100),
+  Role VARCHAR(50), -- e.g. Guide, Marketing, Inventory, Developer, Admin
+  Responsibilities TEXT
+);
+
+
+-- Staff table sample data based on original ERD case study
+INSERT INTO Staff (Name, Role, Responsibilities)
+VALUES
+('John MacNell','Guide','Organizes and leads treks, handles logistics like airfare, visas, and inoculations'),
+('D.B. Duke Marland','Guide','Plans and guides trips, ensures safety and compliance with travel requirements'),
+('Anita Gallegos','Marketing','Develops advertising campaigns, manages promotions and customer outreach'),
+('Dimitrios Stravopolous','Inventory','Orders supplies, manages equipment inventory, tracks rentals and purchases'),
+('Mei Wong','Developer','Builds and maintains the e-commerce site for trip schedules and equipment sales'),
+('Blythe Timmerson','Admin','Handles office operations and overall administration of Outland Adventures'),
+('Jim Ford','Admin','Handles office operations and overall administration of Outland Adventures');
 
 -- =========================
 -- Table: Trip
@@ -113,7 +134,7 @@ CREATE TABLE Trip (
   StartDate DATE,
   EndDate DATE,
   Price DECIMAL(10,2),
-  SuggestedMaxParticipants INT
+  SuggestedMaxParticipants INT,
   LeadGuide INT, -- references Staff table
   FOREIGN KEY (LeadGuide) REFERENCES Staff(StaffID)
 );
@@ -250,27 +271,6 @@ VALUES
 (8,'SMS','555-8888',TRUE,'2025-01-30'),
 (10,'Email','martinez@example.com',TRUE,'2025-02-01');
 
--- =========================
--- Table: Staff
--- =========================
-CREATE TABLE Staff (
-  StaffID INT AUTO_INCREMENT PRIMARY KEY,
-  Name VARCHAR(100),
-  Role VARCHAR(50), -- e.g. Guide, Marketing, Inventory, Developer, Admin
-  Responsibilities TEXT
-);
-
-
--- Staff table sample data based on original ERD case study
-INSERT INTO Staff (Name, Role, Responsibilities)
-VALUES
-('John MacNell','Guide','Organizes and leads treks, handles logistics like airfare, visas, and inoculations'),
-('D.B. Duke Marland','Guide','Plans and guides trips, ensures safety and compliance with travel requirements'),
-('Anita Gallegos','Marketing','Develops advertising campaigns, manages promotions and customer outreach'),
-('Dimitrios Stravopolous','Inventory','Orders supplies, manages equipment inventory, tracks rentals and purchases'),
-('Mei Wong','Developer','Builds and maintains the e-commerce site for trip schedules and equipment sales'),
-('Blythe Timmerson','Admin','Handles office operations and overall administration of Outland Adventures'),
-('Jim Ford','Admin','Handles office operations and overall administration of Outland Adventures');
 
 -- Granting user account permissions to outland_adventures staff members
 /* GRANT SELECT, INSERT, UPDATE, DELETE ON outland_adventures.* TO 'john.macneil@outlandadventures.com';
@@ -331,18 +331,23 @@ GROUP BY e.EquipmentID, e.Name, e.Category, e.InitialCost, e.SalePrice, e.Rental
 -- View: EquipmentAgeAndInventoryStatus
 -- ============================================
 CREATE VIEW EquipmentAgeAndInventoryStatus AS
-SELECT
-    EquipmentID,
-    Name,
-    Category,
-    EquipCondition AS EquipCondition,
-    AvailableQuantity AS InventoryLevel,
-    PurchaseDate,
-    DATEDIFF(CURDATE(), PurchaseDate) AS DaysSincePurchase,
-    TIMESTAMPDIFF(YEAR, PurchaseDate, CURDATE()) AS YearsSincePurchase,
-    CASE
-        WHEN TIMESTAMPDIFF(YEAR, PurchaseDate, CURDATE()) >= 5 THEN 'Over 5 Years Old'
-        ELSE 'Under 5 Years Old'
-    END AS AgeStatus
-FROM
-    Equipment;
+SELECT 
+        e.EquipmentID AS `EquipmentID`,
+        e.Name AS `Name`,
+        e.Category AS `Category`,
+        e.EquipCondition AS `EquipCondition`,
+        e.AvailableQuantity AS `InventoryLevel`,
+        e.PurchaseDate AS `PurchaseDate`,
+        (TO_DAYS(CURDATE()) - TO_DAYS(e.PurchaseDate)) AS `DaysSincePurchase`,
+        TIMESTAMPDIFF(YEAR, e.PurchaseDate, CURDATE()) AS `YearsSincePurchase`,
+        (CASE
+            WHEN TIMESTAMPDIFF(YEAR, e.PurchaseDate, CURDATE()) >= 5
+            THEN 'Over 5 Years Old'
+            ELSE 'Under 5 Years Old'
+        END) AS `AgeStatus`
+    FROM Equipment e
+    ORDER BY e.PurchaseDate ASC, e.EquipCondition ASC;
+
+
+
+    
