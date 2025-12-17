@@ -394,6 +394,8 @@ SELECT
     ChangeInBookings,
     Trend,
     -- Count consecutive downward months per region
+    -- Below is a website that does a good job explaining the SQL PARTITION BY clause
+    -- https://www.sqlshack.com/sql-partition-by-clause-overview/
     SUM(CASE WHEN Trend = 'Downward' THEN 1 ELSE 0 END)
         OVER (PARTITION BY Region ORDER BY Year, Month
               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS ConsecutiveDownwardMonths
