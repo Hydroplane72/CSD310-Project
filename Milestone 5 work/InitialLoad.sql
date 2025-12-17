@@ -201,8 +201,7 @@ VALUES
 -- Miller Family (AccountID 7) already booked TripID 7 on 2025-04-01
 (7, 8, '2025-09-01', 'Confirmed', 2),
 
--- Davis Family (AccountID 8) already booked TripID 8 on 2025-04-20
-(8, 9, '2025-09-15', 'Confirmed', 4),
+
 
 -- Rodriguez Family (AccountID 9) already booked TripID 9 on 2025-05-01
 (9, 10, '2025-10-01', 'Pending', 2),
@@ -390,23 +389,31 @@ CREATE VIEW RegionBookingParticipantsReport AS
 SELECT
     t.Region AS `Region`,
     YEAR(t.StartDate) AS `Year`,
-    MONTH(t.StartDate) AS `Month`,
-    
-    -- Total number of distinct bookings in the region for that month
-    COUNT(b.BookingID) AS `Total Bookings`,
-    
-    -- Total number of participants across all bookings in the region for that month
-    COALESCE(SUM(b.NumberOfParticipants),0) AS `Total Participants`,
-    
-    -- Average participants per booking for that month
+    MONTHNAME(t.StartDate) AS `Month`,   -- Show month as word
+
+    -- Average participants per trip (whole number)
     ROUND(
-        COALESCE(SUM(b.NumberOfParticipants),0) / NULLIF(COUNT(b.BookingID),0),
-        2
-    ) AS `Avg Participants per Booking`
-          
+        COALESCE(SUM(b.NumberOfParticipants),0) / NULLIF(COUNT(DISTINCT t.TripID),0),
+        0
+    ) AS `Avg Participants per Trip`,
+
+    -- Trend flag based on bookings
+    CASE
+        WHEN COUNT(b.BookingID) < LAG(COUNT(b.BookingID)) OVER (
+            PARTITION BY t.Region 
+            ORDER BY YEAR(t.StartDate), MONTH(t.StartDate)
+        ) THEN 'Downward'
+        WHEN COUNT(b.BookingID) > LAG(COUNT(b.BookingID)) OVER (
+            PARTITION BY t.Region 
+            ORDER BY YEAR(t.StartDate), MONTH(t.StartDate)
+        ) THEN 'Upward'
+        ELSE 'No Change'
+    END AS `Trend`
+
 FROM Trip t
 LEFT JOIN Booking b ON t.TripID = b.TripID
-GROUP BY t.Region, YEAR(t.StartDate), MONTH(t.StartDate)
-ORDER BY `Region` ASC, `Year` ASC, `Month` ASC;
+GROUP BY t.Region, YEAR(t.StartDate), MONTHNAME(t.StartDate), MONTH(t.StartDate)
+ORDER BY `Region` ASC, `Year` ASC, MONTH(t.StartDate) ASC;
+
 
     
