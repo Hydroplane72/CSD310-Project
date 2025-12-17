@@ -387,33 +387,46 @@ SELECT
 -- ============================================
 CREATE VIEW RegionBookingParticipantsReport AS
 SELECT
-    t.Region AS `Region`,
-    YEAR(t.StartDate) AS `Year`,
-    MONTHNAME(t.StartDate) AS `Month`,   -- Show month as word
+    Region,
+    Year,
+    Month,
+    TotalBookings,
+    ChangeInBookings,
+    Trend,
+    -- Count consecutive downward months per region
+    SUM(CASE WHEN Trend = 'Downward' THEN 1 ELSE 0 END)
+        OVER (PARTITION BY Region ORDER BY Year, Month
+              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS ConsecutiveDownwardMonths
+FROM (
+    SELECT
+        t.Region AS Region,
+        YEAR(t.StartDate) AS Year,
+        MONTHNAME(t.StartDate) AS Month,
+        COUNT(b.BookingID) AS TotalBookings,
 
-    -- Average participants per trip (whole number)
-    ROUND(
-        COALESCE(SUM(b.NumberOfParticipants),0) / NULLIF(COUNT(DISTINCT t.TripID),0),
-        0
-    ) AS `Avg Participants per Trip`,
-
-    -- Trend flag based on bookings
-    CASE
-        WHEN COUNT(b.BookingID) < LAG(COUNT(b.BookingID)) OVER (
+        COUNT(b.BookingID) -
+        LAG(COUNT(b.BookingID)) OVER (
             PARTITION BY t.Region 
             ORDER BY YEAR(t.StartDate), MONTH(t.StartDate)
-        ) THEN 'Downward'
-        WHEN COUNT(b.BookingID) > LAG(COUNT(b.BookingID)) OVER (
-            PARTITION BY t.Region 
-            ORDER BY YEAR(t.StartDate), MONTH(t.StartDate)
-        ) THEN 'Upward'
-        ELSE 'No Change'
-    END AS `Trend`
+        ) AS ChangeInBookings,
 
-FROM Trip t
-LEFT JOIN Booking b ON t.TripID = b.TripID
-GROUP BY t.Region, YEAR(t.StartDate), MONTHNAME(t.StartDate), MONTH(t.StartDate)
-ORDER BY `Region` ASC, `Year` ASC, MONTH(t.StartDate) ASC;
+        CASE
+            WHEN COUNT(b.BookingID) < LAG(COUNT(b.BookingID)) OVER (
+                PARTITION BY t.Region 
+                ORDER BY YEAR(t.StartDate), MONTH(t.StartDate)
+            ) THEN 'Downward'
+            WHEN COUNT(b.BookingID) > LAG(COUNT(b.BookingID)) OVER (
+                PARTITION BY t.Region 
+                ORDER BY YEAR(t.StartDate), MONTH(t.StartDate)
+            ) THEN 'Upward'
+            ELSE 'No Change'
+        END AS Trend
+    FROM Trip t
+    LEFT JOIN Booking b ON t.TripID = b.TripID
+    GROUP BY t.Region, YEAR(t.StartDate), MONTHNAME(t.StartDate), MONTH(t.StartDate)
+) AS MonthlyTrend
+ORDER BY Region, Year, Month;
+
 
 
     
