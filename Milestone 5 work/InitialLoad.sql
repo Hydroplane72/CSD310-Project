@@ -408,3 +408,5 @@ FROM Trip t
 LEFT JOIN Booking b ON t.TripID = b.TripID
 GROUP BY t.Region, YEAR(t.StartDate), MONTH(t.StartDate)
 ORDER BY `Region` ASC, `Year` ASC, `Month` ASC;
+
+    
