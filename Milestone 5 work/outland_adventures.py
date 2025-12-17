@@ -114,7 +114,7 @@ def connect_and_print_reports():
         # ------------------------------------------------------------
         # REPORT SAMPLE 1: Booking Summary by Trip and Region
         # ------------------------------------------------------------
-        query = "SELECT * From BookingSummaryByTripAndRegion"
+        query = "SELECT * From RegionBookingParticipantsReport"
         print_table(
             cursor=cursor,
             title="Report Sample: Booking Summary by Trip and Region",

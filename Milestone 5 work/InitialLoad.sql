@@ -8,6 +8,7 @@ USE outland_adventures;
 -- Drop all views first (to avoid dependency errors)
 DROP VIEW IF EXISTS EquipmentProfitViewWithRentals;
 DROP VIEW IF EXISTS EquipmentAgeAndInventoryStatus;
+DROP VIEW IF EXISTS RegionBookingParticipantsReport;
 
 -- Drop all tables (reverse dependency order)
 DROP TABLE IF EXISTS Waiver;
@@ -178,7 +179,53 @@ VALUES
 (7,7,'2025-04-01','Pending',2),
 (8,8,'2025-04-20','Confirmed',4),
 (9,9,'2025-05-01','Confirmed',2),
-(10,10,'2025-05-15','Pending',1);
+(10,10,'2025-05-15','Pending',1),
+-- Smith Family (AccountID 1) already booked TripID 1 on 2025-01-15
+(1, 2, '2025-06-10', 'Confirmed', 4),
+
+-- Johnson Family (AccountID 2) already booked TripID 2 on 2025-01-20
+(2, 3, '2025-06-15', 'Confirmed', 3),
+
+-- Williams Family (AccountID 3) already booked TripID 3 on 2025-02-01
+(3, 4, '2025-07-05', 'Pending', 2),
+
+-- Brown Family (AccountID 4) already booked TripID 4 on 2025-02-10
+(4, 5, '2025-07-12', 'Confirmed', 5),
+
+-- Jones Family (AccountID 5) already booked TripID 5 on 2025-03-01
+(5, 6, '2025-08-01', 'Confirmed', 2),
+
+-- Garcia Family (AccountID 6) already booked TripID 6 on 2025-03-15
+(6, 7, '2025-08-10', 'Cancelled', 3),
+
+-- Miller Family (AccountID 7) already booked TripID 7 on 2025-04-01
+(7, 8, '2025-09-01', 'Confirmed', 2),
+
+-- Davis Family (AccountID 8) already booked TripID 8 on 2025-04-20
+(8, 9, '2025-09-15', 'Confirmed', 4),
+
+-- Rodriguez Family (AccountID 9) already booked TripID 9 on 2025-05-01
+(9, 10, '2025-10-01', 'Pending', 2),
+
+-- Martinez Family (AccountID 10) already booked TripID 10 on 2025-05-15
+(10, 1, '2025-10-20', 'Confirmed', 3),
+
+-- Africa trips
+(1, 2, '2025-06-05', 'Confirmed', 3),
+(2, 3, '2025-06-12', 'Pending', 2),
+(3, 4, '2025-06-20', 'Confirmed', 4),
+(4, 1, '2025-07-01', 'Confirmed', 1),
+
+-- Asia trips
+(5, 7, '2025-08-05', 'Confirmed', 2),
+(6, 8, '2025-08-12', 'Confirmed', 3),
+(7, 10, '2025-08-20', 'Pending', 5),
+(8, 7, '2025-09-01', 'Confirmed', 4),
+(9, 8, '2025-09-10', 'Confirmed', 3),
+(10, 10, '2025-09-20', 'Cancelled', 2);
+
+
+
 
 -- Table: Equipment
 -- =========================
@@ -339,18 +386,25 @@ SELECT
 -- ============================================
 -- View: EquipmentAgeAndInventoryStatus
 -- ============================================
-CREATE VIEW BookingSummaryByTripAndRegion AS
+CREATE VIEW RegionBookingParticipantsReport AS
 SELECT
-          t.TripID,
-          t.Destination,
-          t.Region,
-          t.StartDate,
-          t.EndDate,
-          b.BookingDate,
-          b.Status,
-          b.NumberOfParticipants
-      FROM Trip t
-      JOIN Booking b ON t.TripID = b.TripID
-      ORDER BY t.Region, t.StartDate;
-
+    t.Region AS `Region`,
+    YEAR(t.StartDate) AS `Year`,
+    MONTH(t.StartDate) AS `Month`,
     
+    -- Total number of distinct bookings in the region for that month
+    COUNT(b.BookingID) AS `Total Bookings`,
+    
+    -- Total number of participants across all bookings in the region for that month
+    COALESCE(SUM(b.NumberOfParticipants),0) AS `Total Participants`,
+    
+    -- Average participants per booking for that month
+    ROUND(
+        COALESCE(SUM(b.NumberOfParticipants),0) / NULLIF(COUNT(b.BookingID),0),
+        2
+    ) AS `Avg Participants per Booking`
+          
+FROM Trip t
+LEFT JOIN Booking b ON t.TripID = b.TripID
+GROUP BY t.Region, YEAR(t.StartDate), MONTH(t.StartDate)
+ORDER BY `Region` ASC, `Year` ASC, `Month` ASC;
