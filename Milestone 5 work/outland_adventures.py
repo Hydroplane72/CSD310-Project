@@ -46,9 +46,9 @@ def fmt_value(val, col_name=""):
 
     # Money and percent formatting for report readability
     money_cols = {
-        "InitialCost", "SalePrice", "RentalPrice", "SaleProfit", "TotalRentalRevenue"
+        "Initial Cost", "Total Sale Revenue", "Total Rental Revenue", "Total Combined Revenue", "Total Profit"
     }
-    percent_cols = {"RentalROI_Percent"}
+    percent_cols = {""}
 
     if col_name in money_cols:
         try:
